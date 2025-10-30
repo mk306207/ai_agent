@@ -10,10 +10,20 @@ class Main {
             String userInput = scanner.nextLine();
             if (userInput.equals("exit")) {
                 IO.println("Goodbye!");
-                return;
+                break;
             }
 
             testChatBot.main(userInput);
+        }
+        while (true){
+            String userInput = scanner.nextLine();
+            String route = routerAI.request(userInput);
+            if (route.equals("ERROR")) {
+                return;
+            }
+            else {
+                IO.println(route);
+            }
         }
     }
 }

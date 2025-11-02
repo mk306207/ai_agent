@@ -1,0 +1,143 @@
+CloudSync API - Error Troubleshooting Guide
+===========================================
+
+Common HTTP Error Codes
+-----------------------
+
+401 UNAUTHORIZED
+----------------
+Error Message: "Invalid or missing authentication token"
+
+Causes:
+- API key not included in Authorization header
+- API key is expired (older than 12 months)
+- API key was revoked or deleted
+- Wrong key format (missing "Bearer" prefix)
+- Using test key in production or vice versa
+
+Solutions:
+1. Verify header format: Authorization: Bearer YOUR_KEY
+2. Check key expiration date in Dashboard > API Keys
+3. Generate a new key if expired
+4. Ensure you're using correct environment key (test vs live)
+5. Check if key was accidentally deleted
+
+Test Command:
+curl -H "Authorization: Bearer YOUR_KEY" \
+     https://api.cloudsync.io/v1/auth/verify
+
+Expected Response: {"valid": true, "expires_at": "2025-12-31"}
+
+---
+
+403 FORBIDDEN
+-------------
+Error Message: "Insufficient permissions for this resource"
+
+Causes:
+- API key lacks required permissions
+- Attempting to access another team's resources
+- Account suspended or payment overdue
+- Rate limit exceeded for your tier
+
+Solutions:
+1. Check key permissions in Dashboard > API Keys > Key Details
+2. Verify you're accessing your own team's resources
+3. Check account status in Dashboard > Billing
+4. Wait for rate limit reset (check X-RateLimit-Reset header)
+5. Upgrade plan if consistently hitting limits
+
+---
+
+404 NOT FOUND
+-------------
+Error Message: "Resource not found"
+
+Causes:
+- Incorrect endpoint URL
+- Resource ID doesn't exist
+- Resource was deleted
+- Typo in API version (using /v2/ instead of /v1/)
+
+Solutions:
+1. Verify endpoint URL: https://api.cloudsync.io/v1/{resource}
+2. Check resource ID is correct
+3. Ensure resource wasn't deleted (check audit logs)
+4. Use correct API version (currently v1)
+
+---
+
+429 RATE LIMIT EXCEEDED
+-----------------------
+Error Message: "Too many requests. Please slow down."
+
+Causes:
+- Exceeded requests per hour limit for your tier
+- Multiple API keys from same account hitting limits
+- Burst rate exceeded (>10 requests/second)
+
+Solutions:
+1. Implement exponential backoff in your code
+2. Check X-RateLimit-Remaining header before requests
+3. Cache responses where possible
+4. Upgrade to higher tier (Pro or Enterprise)
+5. Contact support for temporary limit increase
+
+Rate Limit Headers:
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 847
+X-RateLimit-Reset: 1640995200 (Unix timestamp)
+
+---
+
+500 INTERNAL SERVER ERROR
+-------------------------
+Error Message: "An unexpected error occurred"
+
+Causes:
+- Temporary server issue
+- Malformed request payload
+- Bug in API (rare)
+
+Solutions:
+1. Retry request after 5 seconds
+2. Check request payload format matches documentation
+3. Verify JSON is valid (use JSON validator)
+4. Check CloudSync Status Page: https://status.cloudsync.io
+5. Contact support with X-Request-ID header value
+
+---
+
+Connection Timeout Issues
+-------------------------
+Symptoms: Request hangs or times out after 30+ seconds
+
+Causes:
+- Network connectivity problems
+- Firewall blocking outbound HTTPS (port 443)
+- DNS resolution failure
+- Geographic latency (connecting from far region)
+
+Solutions:
+1. Test connection: ping api.cloudsync.io
+2. Check firewall allows HTTPS outbound on port 443
+3. Verify DNS resolves: nslookup api.cloudsync.io
+4. Set timeout to 30 seconds in your HTTP client
+5. Use regional endpoint if available (e.g., eu.api.cloudsync.io)
+
+---
+
+SSL/TLS Certificate Errors
+---------------------------
+Error: "SSL certificate verification failed"
+
+Causes:
+- Outdated CA certificates on system
+- Corporate proxy intercepting HTTPS
+- System clock incorrect (affects certificate validation)
+
+Solutions:
+1. Update CA certificates: sudo update-ca-certificates
+2. Check system time is correct
+3. If behind proxy, import proxy's certificate
+4. Temporarily disable verification for testing (NOT for production!)

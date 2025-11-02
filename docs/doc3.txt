@@ -1,0 +1,317 @@
+CloudSync SDK - Integration Guide
+==================================
+
+Supported SDKs
+--------------
+We provide official SDKs for the following languages:
+- Python (3.8+)
+- JavaScript/Node.js (14+)
+- Java (11+)
+- Ruby (2.7+)
+- PHP (7.4+)
+- Go (1.18+)
+
+---
+
+PYTHON SDK
+----------
+
+Installation:
+pip install cloudsync-sdk
+
+Basic Setup:
+```python
+from cloudsync import CloudSync
+
+# Initialize client
+client = CloudSync(api_key="cs_live_your_key_here")
+
+# Upload a file
+file = client.files.upload(
+    file_path="document.pdf",
+    folder_id="folder_abc123"
+)
+print(f"File uploaded: {file.id}")
+
+# List files
+files = client.files.list(limit=10)
+for file in files:
+    print(f"{file.name} - {file.size} bytes")
+
+# Download file
+client.files.download(
+    file_id="file_xyz789",
+    destination="downloaded_file.pdf"
+)
+
+# Delete file
+client.files.delete(file_id="file_xyz789")
+```
+
+Advanced Features:
+```python
+# Upload with progress callback
+def progress_callback(bytes_uploaded, total_bytes):
+    percent = (bytes_uploaded / total_bytes) * 100
+    print(f"Upload progress: {percent:.1f}%")
+
+file = client.files.upload(
+    file_path="large_video.mp4",
+    folder_id="folder_abc123",
+    on_progress=progress_callback
+)
+
+# Search files
+results = client.files.search(
+    query="invoice 2024",
+    file_type="pdf",
+    limit=20
+)
+
+# Share file with public link
+link = client.files.create_share_link(
+    file_id="file_xyz789",
+    expires_in_days=7,
+    password="secret123"
+)
+print(f"Share link: {link.url}")
+```
+
+Error Handling:
+```python
+from cloudsync.exceptions import AuthenticationError, RateLimitError
+
+try:
+    file = client.files.upload("document.pdf")
+except AuthenticationError as e:
+    print(f"Authentication failed: {e.message}")
+except RateLimitError as e:
+    print(f"Rate limit exceeded. Retry after {e.retry_after} seconds")
+except Exception as e:
+    print(f"Unexpected error: {str(e)}")
+```
+
+---
+
+JAVASCRIPT/NODE.JS SDK
+----------------------
+
+Installation:
+npm install cloudsync-sdk
+
+Basic Setup:
+```javascript
+const CloudSync = require('cloudsync-sdk');
+
+// Initialize client
+const client = new CloudSync({
+  apiKey: 'cs_live_your_key_here'
+});
+
+// Upload file
+async function uploadFile() {
+  const file = await client.files.upload({
+    filePath: 'document.pdf',
+    folderId: 'folder_abc123'
+  });
+  console.log(`File uploaded: ${file.id}`);
+}
+
+// List files
+async function listFiles() {
+  const files = await client.files.list({ limit: 10 });
+  files.forEach(file => {
+    console.log(`${file.name} - ${file.size} bytes`);
+  });
+}
+
+// Download file
+async function downloadFile() {
+  await client.files.download({
+    fileId: 'file_xyz789',
+    destination: 'downloaded_file.pdf'
+  });
+}
+
+// Delete file
+async function deleteFile() {
+  await client.files.delete('file_xyz789');
+}
+```
+
+Using with TypeScript:
+```typescript
+import CloudSync, { File, UploadOptions } from 'cloudsync-sdk';
+
+const client = new CloudSync({
+  apiKey: process.env.CLOUDSYNC_API_KEY!
+});
+
+const options: UploadOptions = {
+  filePath: 'document.pdf',
+  folderId: 'folder_abc123',
+  onProgress: (uploaded, total) => {
+    console.log(`Progress: ${(uploaded/total*100).toFixed(1)}%`);
+  }
+};
+
+const file: File = await client.files.upload(options);
+```
+
+---
+
+JAVA SDK
+--------
+
+Installation (Maven):
+```xml
+<dependency>
+    <groupId>io.cloudsync</groupId>
+    <artifactId>cloudsync-sdk</artifactId>
+    <version>2.4.0</version>
+</dependency>
+```
+
+Installation (Gradle):
+```gradle
+implementation 'io.cloudsync:cloudsync-sdk:2.4.0'
+```
+
+Basic Setup:
+```java
+import io.cloudsync.CloudSync;
+import io.cloudsync.models.File;
+import io.cloudsync.exceptions.*;
+
+// Initialize client
+CloudSync client = new CloudSync("cs_live_your_key_here");
+
+// Upload file
+File file = client.files().upload(
+    new UploadRequest()
+        .filePath("document.pdf")
+        .folderId("folder_abc123")
+);
+System.out.println("File uploaded: " + file.getId());
+
+// List files
+List<File> files = client.files().list(
+    new ListRequest().limit(10)
+);
+for (File f : files) {
+    System.out.println(f.getName() + " - " + f.getSize() + " bytes");
+}
+
+// Download file
+client.files().download(
+    new DownloadRequest()
+        .fileId("file_xyz789")
+        .destination("downloaded_file.pdf")
+);
+
+// Delete file
+client.files().delete("file_xyz789");
+```
+
+Error Handling:
+```java
+try {
+    File file = client.files().upload(uploadRequest);
+} catch (AuthenticationException e) {
+    System.err.println("Authentication failed: " + e.getMessage());
+} catch (RateLimitException e) {
+    System.err.println("Rate limit exceeded. Retry after " +
+                       e.getRetryAfter() + " seconds");
+} catch (CloudSyncException e) {
+    System.err.println("Error: " + e.getMessage());
+}
+```
+
+---
+
+WEBHOOK INTEGRATION
+-------------------
+
+Setting up webhooks to receive real-time notifications:
+
+Step 1: Create endpoint in your application
+POST https://yourdomain.com/webhooks/cloudsync
+
+Step 2: Register webhook in Dashboard
+Dashboard > Settings > Webhooks > Add Endpoint
+
+Step 3: Select events to receive
+- file.uploaded
+- file.deleted
+- file.shared
+- folder.created
+- user.added
+
+Step 4: Verify webhook signature (security)
+```python
+import hmac
+import hashlib
+
+def verify_webhook(payload, signature, secret):
+    expected = hmac.new(
+        secret.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+
+# In your webhook handler
+signature = request.headers.get('X-CloudSync-Signature')
+if verify_webhook(request.body, signature, webhook_secret):
+    # Process webhook
+    event = json.loads(request.body)
+    print(f"Event: {event['type']}")
+else:
+    return 401  # Unauthorized
+```
+
+Webhook Payload Example:
+```json
+{
+  "id": "evt_abc123",
+  "type": "file.uploaded",
+  "created_at": "2024-01-15T10:30:00Z",
+  "data": {
+    "file_id": "file_xyz789",
+    "file_name": "report.pdf",
+    "file_size": 524288,
+    "folder_id": "folder_abc123",
+    "uploaded_by": "user_john_doe"
+  }
+}
+```
+
+---
+
+TESTING YOUR INTEGRATION
+-------------------------
+
+1. Use Test Mode API Keys
+   - Keys starting with cs_test_ won't affect production data
+   - Test mode has same functionality as live mode
+
+2. Test Webhook Locally
+   - Use ngrok to expose local server: ngrok http 3000
+   - Point webhook URL to ngrok URL
+
+3. Use SDK Test Helpers
+```python
+# Python
+client = CloudSync(api_key="cs_test_key", test_mode=True)
+
+# JavaScript
+const client = new CloudSync({
+  apiKey: 'cs_test_key',
+  testMode: true
+});
+```
+
+4. Check API Logs
+   - View all API requests in Dashboard > API Logs
+   - Filter by status code, endpoint, time range
+   - Useful for debugging issues

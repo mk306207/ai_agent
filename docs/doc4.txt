@@ -1,0 +1,292 @@
+Webhook Configuration Guide
+============================
+
+Webhooks allow CloudSync to send real-time notifications to your
+application when events occur.
+
+What are Webhooks?
+-----------------
+Instead of polling our API for changes, webhooks push notifications
+to your server immediately when events happen. This is more efficient
+and enables real-time integrations.
+
+Setting Up Webhooks
+-------------------
+1. Prepare your endpoint:
+   - Must be publicly accessible HTTPS URL
+   - Must respond with 200 OK within 5 seconds
+   - Should handle POST requests
+
+2. Configure in Dashboard:
+   - Go to Settings > Webhooks
+   - Click "Add Webhook Endpoint"
+   - Enter your HTTPS URL (e.g., https://yourapp.com/webhooks/cloudsync)
+   - Select events you want to receive
+   - Click "Create"
+   - Save the webhook signing secret (shown once)
+
+3. Implement the endpoint in your application (see examples below)
+
+Available Webhook Events
+-----------------------
+File Events:
+- file.uploaded: New file was uploaded
+- file.updated: File metadata was changed
+- file.deleted: File was permanently deleted
+- file.shared: File was shared with another user
+
+Folder Events:
+- folder.created: New folder was created
+- folder.deleted: Folder was deleted
+- folder.shared: Folder was shared
+
+User Events:
+- user.created: New user added to account
+- user.deleted: User was removed
+- user.permission_changed: User role/permissions updated
+
+Payment Events:
+- payment.succeeded: Payment was processed successfully
+- payment.failed: Payment processing failed
+- subscription.updated: Subscription plan changed
+- subscription.cancelled: Subscription was cancelled
+
+Webhook Payload Format
+---------------------
+All webhooks are sent as POST requests with JSON body:
+
+{
+  "id": "evt_1234567890",
+  "type": "file.uploaded",
+  "created": 1640995200,
+  "data": {
+    "file": {
+      "id": "file_abc123",
+      "name": "document.pdf",
+      "size": 1048576,
+      "uploaded_by": "user_xyz789",
+      "uploaded_at": 1640995200
+    }
+  }
+}
+
+Webhook Security (IMPORTANT!)
+-----------------------------
+Always verify webhook signatures to ensure requests are from CloudSync.
+
+Signature Verification Process:
+1. Get signature from X-CloudSync-Signature header
+2. Get timestamp from X-CloudSync-Timestamp header
+3. Concatenate: timestamp + "." + raw_request_body
+4. Compute HMAC-SHA256 using your webhook signing secret
+5. Compare computed signature with received signature
+6. Reject if signatures don't match
+7. Reject if timestamp is >5 minutes old (prevents replay attacks)
+
+Python Example:
+import hmac
+import hashlib
+import time
+
+def verify_webhook(payload, signature, timestamp, secret):
+    # Check timestamp (prevent replay attacks)
+    if abs(time.time() - int(timestamp)) > 300:
+        return False
+
+    # Compute signature
+    message = f"{timestamp}.{payload}"
+    computed = hmac.new(
+        secret.encode(),
+        message.encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+    # Compare signatures (constant-time comparison)
+    return hmac.compare_digest(computed, signature)
+
+# In your Flask app:
+from flask import Flask, request, abort
+
+@app.route('/webhooks/cloudsync', methods=['POST'])
+def webhook():
+    signature = request.headers.get('X-CloudSync-Signature')
+    timestamp = request.headers.get('X-CloudSync-Timestamp')
+    payload = request.get_data(as_text=True)
+
+    if not verify_webhook(payload, signature, timestamp, WEBHOOK_SECRET):
+        abort(401)
+
+    event = request.json
+
+    if event['type'] == 'file.uploaded':
+        handle_file_upload(event['data']['file'])
+
+    return '', 200
+
+Node.js Example:
+const crypto = require('crypto');
+
+function verifyWebhook(payload, signature, timestamp, secret) {
+  // Check timestamp
+  if (Math.abs(Date.now() / 1000 - parseInt(timestamp)) > 300) {
+    return false;
+  }
+
+  // Compute signature
+  const message = `${timestamp}.${payload}`;
+  const computed = crypto
+    .createHmac('sha256', secret)
+    .update(message)
+    .digest('hex');
+
+  // Compare signatures
+  return crypto.timingSafeEqual(
+    Buffer.from(computed),
+    Buffer.from(signature)
+  );
+}
+
+// Express.js example:
+app.post('/webhooks/cloudsync', express.raw({type: 'application/json'}), (req, res) => {
+  const signature = req.headers['x-cloudsync-signature'];
+  const timestamp = req.headers['x-cloudsync-timestamp'];
+  const payload = req.body.toString();
+
+  if (!verifyWebhook(payload, signature, timestamp, WEBHOOK_SECRET)) {
+    return res.status(401).send('Invalid signature');
+  }
+
+  const event = JSON.parse(payload);
+
+  if (event.type === 'file.uploaded') {
+    handleFileUpload(event.data.file);
+  }
+
+  res.status(200).send('OK');
+});
+
+Java Example:
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.time.Instant;
+
+public boolean verifyWebhook(String payload, String signature,
+                             String timestamp, String secret) {
+    // Check timestamp
+    long now = Instant.now().getEpochSecond();
+    long webhookTime = Long.parseLong(timestamp);
+    if (Math.abs(now - webhookTime) > 300) {
+        return false;
+    }
+
+    try {
+        // Compute signature
+        String message = timestamp + "." + payload;
+        Mac mac = Mac.getInstance("HmacSHA256");
+        SecretKeySpec keySpec = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
+        mac.init(keySpec);
+        byte[] hash = mac.doFinal(message.getBytes());
+
+        String computed = bytesToHex(hash);
+
+        // Compare signatures
+        return MessageDigest.isEqual(
+            computed.getBytes(),
+            signature.getBytes()
+        );
+    } catch (Exception e) {
+        return false;
+    }
+}
+
+Best Practices
+-------------
+1. Respond quickly:
+   - Return 200 OK immediately
+   - Process webhook asynchronously in background job
+   - Don't perform long operations in webhook handler
+
+2. Handle duplicates:
+   - Store event IDs in database
+   - Skip events you've already processed
+   - Webhooks may be sent multiple times
+
+3. Retry logic:
+   - CloudSync retries failed webhooks 3 times
+   - Exponential backoff: 1 min, 5 min, 15 min
+   - After 3 failures, webhook is marked as failed in dashboard
+
+4. Monitor webhook health:
+   - Check Dashboard > Webhooks > Activity Log
+   - Set up alerts for failed webhooks
+   - Review error messages and fix issues
+
+5. Test webhooks:
+   - Use webhook testing tool: https://app.cloudsync.io/webhooks/test
+   - Send test events to your endpoint
+   - Verify signature verification works
+
+Common Issues
+------------
+Issue: Webhooks not received
+Solutions:
+- Verify endpoint is publicly accessible
+- Check firewall allows incoming HTTPS requests
+- Ensure SSL certificate is valid
+- Check endpoint returns 200 OK within 5 seconds
+
+Issue: "Invalid signature" errors
+Solutions:
+- Verify you're using correct signing secret
+- Check you're hashing timestamp + "." + raw body (not parsed JSON)
+- Use raw request body (bytes), not string
+- Verify no whitespace/newline changes to body
+
+Issue: Duplicate webhooks received
+Solutions:
+- This is normal (webhooks are at-least-once delivery)
+- Implement idempotency using event ID
+- Store processed event IDs in database
+
+Webhook Endpoints by Event
+--------------------------
+You can configure different endpoints for different event types:
+
+Example setup:
+- File events → https://yourapp.com/webhooks/files
+- User events → https://yourapp.com/webhooks/users
+- Payment events → https://yourapp.com/webhooks/billing
+
+This allows different microservices to handle different events.
+
+Rate Limits
+----------
+Webhooks are not subject to API rate limits, but:
+- Maximum 100 webhook events per second per endpoint
+- If exceeded, events are queued and sent when possible
+- Queue holds events for 24 hours, then they're dropped
+
+Webhook Logs
+-----------
+All webhook deliveries are logged for 30 days:
+- Request/response status codes
+- Timestamps
+- Error messages
+- Retry attempts
+
+Access logs in Dashboard > Webhooks > Activity Log
+
+Disabling Webhooks
+-----------------
+To temporarily disable webhooks without deleting configuration:
+1. Go to Settings > Webhooks
+2. Click on webhook endpoint
+3. Toggle "Enabled" switch to OFF
+4. Toggle back ON when ready to receive webhooks again
+
+Support
+-------
+- Documentation: https://docs.cloudsync.io/webhooks
+- Test your webhooks: https://app.cloudsync.io/webhooks/test
+- Community forum: https://community.cloudsync.io/c/webhooks
+- Email: webhooks-support@cloudsync.io

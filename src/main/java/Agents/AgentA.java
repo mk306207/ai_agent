@@ -68,7 +68,7 @@ public class AgentA {
     }
     public String request(String userInput){
         String response = myAgentA.text(userInput);
-        return response;
+        return "🧑‍💻: " + response;
     }
     private List<Document> loadDocumentsFromFolder(String folderPath) {
         List<Document> docs = new ArrayList<>();

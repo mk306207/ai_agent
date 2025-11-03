@@ -1,4 +1,5 @@
 import Agents.AgentA;
+import Agents.AgentB;
 import Agents.routerAI;
 import Agents.testChatBot;
 import io.github.cdimascio.dotenv.Dotenv;
@@ -15,6 +16,7 @@ class Main {
         testChatBot myChat = new testChatBot();
         routerAI routerAI = new routerAI(apiKey);
         AgentA agentA = new AgentA(apiKey);
+        AgentB agentB = new AgentB(apiKey);
         Scanner scanner = new Scanner(System.in);
 
 //        while(true) {
@@ -32,9 +34,16 @@ class Main {
             if (route.equals("ERROR")) {
                 IO.println("Sorry, I can only answer technical or financial questions.");
             }
-            else {
+            else if (route.equals("FINANCIAL")) {
+                String response = agentB.request(userInput);
+                IO.println(response);
+            }
+            else if (route.equals("TECHNICAL")) {
                 String response = agentA.request(userInput);
                 IO.println(response);
+            }
+            else {
+                IO.println("Unexpected routing result.");
             }
         }
     }

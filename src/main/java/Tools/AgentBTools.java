@@ -1,7 +1,7 @@
 package Tools;
 import dev.langchain4j.agent.tool.Tool;
 import Tools.DBManager;
-
+import dev.langchain4j.agent.tool.P;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -19,7 +19,7 @@ public class AgentBTools {
     }};
 
     @Tool("Open a refund case for a customer, given their email, order ID, and reason for the refund.")
-    public String openRefundCase(String email, String orderId, String reason) {
+    public String openRefundCase(@P("email") String email, @P("orderId") String orderId, @P("reason") String reason ) {
         if (email == null || email.trim().isEmpty()) {
             return "Error: Email cannot be empty.";
         }
@@ -35,6 +35,7 @@ public class AgentBTools {
             preparedStatement = conn.prepareStatement(INSERT_SQL);
             preparedStatement.setString(1, email);
             preparedStatement.setString(2, orderId);
+            preparedStatement.setString(3, reason);
             preparedStatement.executeUpdate();
             return "Refund case opened successfully for order " + orderId + ". You will receive an update via email at " + email + " within 2-3 business days.";
         } catch (Exception e) {
@@ -43,7 +44,7 @@ public class AgentBTools {
     }
 
     @Tool("Check the status of a refund case using the customer's email and order ID.")
-    public String checkRefundStatus(String email, String orderId) {
+    public String checkRefundStatus(@P("email") String email, @P("orderId") String orderId) {
         // Validation
         if (email == null || email.trim().isEmpty()) {
             return "Error: Email cannot be empty.";

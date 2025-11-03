@@ -64,9 +64,6 @@ public class AgentA {
                 .contentRetriever(retriever)
                 .chatMemory(sharedMemory)
                 .build();
-
-
-        System.out.println("   Loaded " + documents.size() + " documents");
     }
     public String request(String userInput){
         String response = myAgentA.chat(userInput);

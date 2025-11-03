@@ -1,6 +1,7 @@
 import Agents.AgentA;
 import Agents.AgentB;
 import Agents.routerAI;
+import Tools.DBManager;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import io.github.cdimascio.dotenv.Dotenv;
@@ -10,7 +11,7 @@ import java.util.Scanner;
 class Main {
     static void main() {
         Dotenv dotenv = Dotenv.load();
-        String apiKey = dotenv.get("2APIKEY");
+        String apiKey = dotenv.get("APIKEY");
         ChatMemory sharedMemory = MessageWindowChatMemory.withMaxMessages(20);
         IO.println(("Hello and welcome! If you wish to end the session, please type 'exit'"));
 

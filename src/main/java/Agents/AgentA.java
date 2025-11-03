@@ -5,6 +5,7 @@ import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.onnx.allminilml6v2.AllMiniLmL6V2EmbeddingModel;
@@ -29,7 +30,7 @@ public class AgentA {
     private EmbeddingModel embeddingModel;
     private EmbeddingStore<TextSegment> embeddingStore;
     private List<Document> documents;
-    public AgentA(String apiKey){
+    public AgentA(String apiKey, ChatMemory sharedMemory){
         this.model = OpenAiChatModel
                 .builder()
                 .baseUrl("https://api.groq.com/openai/v1")
@@ -61,13 +62,14 @@ public class AgentA {
         this.myAgentA = AiServices.builder(AgentA_Interface.class)
                 .chatLanguageModel(model)
                 .contentRetriever(retriever)
+                .chatMemory(sharedMemory)
                 .build();
 
 
         System.out.println("   Loaded " + documents.size() + " documents");
     }
     public String request(String userInput){
-        String response = myAgentA.text(userInput);
+        String response = myAgentA.chat(userInput);
         return "🧑‍💻: " + response;
     }
     private List<Document> loadDocumentsFromFolder(String folderPath) {

@@ -1,6 +1,7 @@
 package Agents;
 
 import Interfaces.RouterInterface;
+import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
@@ -8,7 +9,7 @@ import dev.langchain4j.service.AiServices;
 public class routerAI {
     private ChatLanguageModel model;
     private RouterInterface router;
-    public routerAI(String apiKey) {
+    public routerAI(String apiKey, ChatMemory sharedMemory) {
         this.model = OpenAiChatModel
                 .builder().
                 baseUrl("https://api.groq.com/openai/v1").
@@ -17,12 +18,12 @@ public class routerAI {
                 build();
         this.router = AiServices.builder(RouterInterface.class)
                 .chatLanguageModel(model)
+                .chatMemory(sharedMemory)
                 .build();
     }
 
-    public static String request(String userInput,String apiKey) {
-        routerAI myRouter = new routerAI(apiKey);
-        String route = myRouter.router.text(userInput);
+    public static String request(routerAI myRouter, String userInput) {
+        String route = myRouter.router.chat(userInput);
         return route;
     }
 }

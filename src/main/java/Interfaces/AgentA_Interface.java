@@ -15,5 +15,5 @@ public interface AgentA_Interface {
     
             NO SPECULATION. NO GENERAL KNOWLEDGE. DOCUMENTATION ONLY.
             """)
-    String text(String message);
+    String chat(String message);
 }

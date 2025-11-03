@@ -2,6 +2,9 @@ import Agents.AgentA;
 import Agents.AgentB;
 import Agents.routerAI;
 import Agents.testChatBot;
+import Tools.DBManager;
+import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import io.github.cdimascio.dotenv.Dotenv;
 
 import java.util.Scanner;
@@ -10,27 +13,22 @@ class Main {
     static void main() {
         Dotenv dotenv = Dotenv.load();
         String apiKey = dotenv.get("APIKEY");
-
-        IO.println(String.format("Hello and welcome!"));
+        ChatMemory sharedMemory = MessageWindowChatMemory.withMaxMessages(20);
+        IO.println(("Hello and welcome! If you wish to end the session, please type 'exit'"));
 
         testChatBot myChat = new testChatBot();
-        routerAI routerAI = new routerAI(apiKey);
-        AgentA agentA = new AgentA(apiKey);
-        AgentB agentB = new AgentB(apiKey);
+        routerAI routerAI = new routerAI(apiKey, sharedMemory);
+        AgentA agentA = new AgentA(apiKey,sharedMemory);
+        AgentB agentB = new AgentB(apiKey,sharedMemory);
         Scanner scanner = new Scanner(System.in);
 
-//        while(true) {
-//            String userInput = scanner.nextLine();
-//            if (userInput.equals("exit")) {
-//                IO.println("Goodbye!");
-//                break;
-//            }
-//
-//            Agents.testChatBot.main(userInput);
-//        }
         while (true){
             String userInput = scanner.nextLine();
-            String route = routerAI.request(userInput,apiKey);
+            if (userInput.equalsIgnoreCase("exit")){
+                IO.println("Goodbye!");
+                break;
+            }
+            String route = routerAI.request(routerAI,userInput);
             if (route.equals("ERROR")) {
                 IO.println("Sorry, I can only answer technical or financial questions.");
             }

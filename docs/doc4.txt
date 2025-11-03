@@ -45,12 +45,6 @@ User Events:
 - user.deleted: User was removed
 - user.permission_changed: User role/permissions updated
 
-Payment Events:
-- payment.succeeded: Payment was processed successfully
-- payment.failed: Payment processing failed
-- subscription.updated: Subscription plan changed
-- subscription.cancelled: Subscription was cancelled
-
 Webhook Payload Format
 ---------------------
 All webhooks are sent as POST requests with JSON body:

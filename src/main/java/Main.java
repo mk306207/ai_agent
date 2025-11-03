@@ -10,7 +10,6 @@ import java.util.Scanner;
 class Main {
     static void main() {
         Dotenv dotenv = Dotenv.load();
-        //String apiKey = dotenv.get("APIKEY");
         String apiKey = dotenv.get("2APIKEY");
         ChatMemory sharedMemory = MessageWindowChatMemory.withMaxMessages(20);
         IO.println(("Hello and welcome! If you wish to end the session, please type 'exit'"));
